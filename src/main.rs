@@ -14,15 +14,19 @@ use tui::{
     Frame, Terminal,
 };
 
-const FRAME_RATE_ANIME: u16 = 1000;
-
 struct Animation {
     position: u16,
+    speed: u16,
+    frame_counter: u16,
 }
 
 impl Animation {
     fn new() -> Self {
-        Animation { position: 0 }
+        Animation {
+            position: 0,
+            speed: 10,
+            frame_counter: 0,
+        }
     }
 }
 
@@ -43,6 +47,18 @@ impl InputGrid {
             allowed_started: false,
             is_started: false,
         }
+    }
+
+    fn is_full(&self) -> bool {
+        let mut is_full = true;
+        for row in self.matrix {
+            for entry in row {
+                if entry == 0 {
+                    is_full = false;
+                }
+            }
+        }
+        is_full
     }
 }
 
@@ -267,7 +283,14 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid, anime: &mut Animatio
                 .borders(Borders::NONE);
             f.render_widget(disk, animation_chunk[1]);
             if padding[0].width - (2 * padding[0].height) > anime.position {
-                anime.position += 1;
+                if anime.frame_counter < anime.speed {
+                    anime.frame_counter += 1;
+                } else if anime.frame_counter == anime.speed {
+                    anime.frame_counter = 0;
+                    anime.position += 1;
+                }
+            } else {
+                anime.position = 0;
             }
             let animation_border = Block::default()
                 .title("Disk position")
@@ -294,7 +317,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     loop {
         terminal.draw(|f| ui(f, &mut ingrid, &mut animation))?;
-        if event::poll(Duration::from_millis(100))? == true {
+        if event::poll(Duration::from_millis(1))? == true {
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => break,
@@ -319,18 +342,24 @@ fn main() -> Result<(), Box<dyn Error>> {
                         }
                     }
                     KeyCode::Char('w') => {
-                        ingrid.matrix[ingrid.row as usize][ingrid.col as usize] = 1;
+                        if ingrid.is_started == false {
+                            ingrid.matrix[ingrid.row as usize][ingrid.col as usize] = 1;
+                        }
                     }
 
                     KeyCode::Char('b') => {
-                        ingrid.matrix[ingrid.row as usize][ingrid.col as usize] = 2;
+                        if ingrid.is_started == false {
+                            ingrid.matrix[ingrid.row as usize][ingrid.col as usize] = 2;
+                        }
                     }
                     KeyCode::Enter => {
-                        if ingrid.allowed_started == true {
-                            output_array(&ingrid);
-                            ingrid.is_started = true;
+                        if ingrid.is_full() == true {
+                            if ingrid.allowed_started == true {
+                                output_array(&ingrid);
+                                ingrid.is_started = true;
+                            }
+                            ingrid.allowed_started = true;
                         }
-                        ingrid.allowed_started = true;
                     }
                     _ => {}
                 }
