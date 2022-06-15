@@ -49,7 +49,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid) {
     let left_chunk = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
-        .constraints([Constraint::Percentage(100), Constraint::Percentage(0)].as_ref())
+        .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
         .split(chunks[0]);
 
     let right_chunk = Layout::default()
@@ -63,6 +63,47 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid) {
         .margin(1)
         .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
         .split(right_chunk[0]);
+
+    //splitting the rigt-down corner
+    let state_prints_chunk = Layout::default()
+        .direction(Direction::Horizontal)
+        .margin(1)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+        .split(right_chunk[1]);
+
+    let state_progress_chunk = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
+        .split(state_prints_chunk[0]);
+
+    //current progress chart
+    let current_progress_block = Block::default()
+        .title("Current progress")
+        .borders(Borders::ALL);
+    f.render_widget(current_progress_block, state_progress_chunk[1]);
+    //split the grid
+    let vertical_progress_split = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Max(1), Constraint::Max(1), Constraint::Max(1)].as_ref())
+        .split(state_progress_chunk[1]);
+    let mut horizontal_progress_split_vec = vec![vec![Rect::default()]; 3];
+    let mut progress_blocks = vec![vec![Block::default(); 3]; 3];
+    for i in 0..3 {
+        horizontal_progress_split_vec[i] = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Max(1), Constraint::Max(1), Constraint::Max(1)].as_ref())
+            .split(vertical_progress_split[i]);
+    }
+    //place the blocks in the grid
+    for i in 0..3 {
+        for j in 0..3 {
+            progress_blocks[i][j] = Block::default().borders(Borders::ALL);
+            f.render_widget(
+                progress_blocks[i][j].clone(),
+                horizontal_progress_split_vec[i][j],
+            );
+        }
+    }
 
     //RGB Chart
     let title_block = Block::default().title("RGB Chart").borders(Borders::ALL);
