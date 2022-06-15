@@ -241,44 +241,46 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     loop {
         terminal.draw(|f| ui(f, &mut ingrid, &mut animation))?;
-        if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => break,
-                KeyCode::Left => {
-                    if ingrid.col > 0 {
-                        ingrid.col -= 1;
+        if event::poll(Duration::from_millis(100))? == true {
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Char('q') => break,
+                    KeyCode::Left => {
+                        if ingrid.col > 0 {
+                            ingrid.col -= 1;
+                        }
                     }
-                }
-                KeyCode::Right => {
-                    if ingrid.col < 2 {
-                        ingrid.col += 1;
+                    KeyCode::Right => {
+                        if ingrid.col < 2 {
+                            ingrid.col += 1;
+                        }
                     }
-                }
-                KeyCode::Up => {
-                    if ingrid.row > 0 {
-                        ingrid.row -= 1;
+                    KeyCode::Up => {
+                        if ingrid.row > 0 {
+                            ingrid.row -= 1;
+                        }
                     }
-                }
-                KeyCode::Down => {
-                    if ingrid.row < 2 {
-                        ingrid.row += 1;
+                    KeyCode::Down => {
+                        if ingrid.row < 2 {
+                            ingrid.row += 1;
+                        }
                     }
-                }
-                KeyCode::Char('w') => {
-                    ingrid.matrix[ingrid.row as usize][ingrid.col as usize] = 1;
-                }
+                    KeyCode::Char('w') => {
+                        ingrid.matrix[ingrid.row as usize][ingrid.col as usize] = 1;
+                    }
 
-                KeyCode::Char('b') => {
-                    ingrid.matrix[ingrid.row as usize][ingrid.col as usize] = 2;
-                }
-                KeyCode::Enter => {
-                    if ingrid.allowed_started == true {
-                        output_array(&ingrid);
-                        ingrid.is_started = true;
+                    KeyCode::Char('b') => {
+                        ingrid.matrix[ingrid.row as usize][ingrid.col as usize] = 2;
                     }
-                    ingrid.allowed_started = true;
+                    KeyCode::Enter => {
+                        if ingrid.allowed_started == true {
+                            output_array(&ingrid);
+                            ingrid.is_started = true;
+                        }
+                        ingrid.allowed_started = true;
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
     }
