@@ -10,7 +10,7 @@ use tui::{
     layout::{self, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     terminal,
-    widgets::{BarChart, Block, Borders, Paragraph},
+    widgets::{BarChart, Block, BorderType, Borders, Paragraph},
     Frame, Terminal,
 };
 
@@ -55,19 +55,29 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid, anime: &mut Animatio
     //layout
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .margin(1)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
         .split(f.size());
 
     let left_chunk = Layout::default()
         .direction(Direction::Vertical)
-        .margin(1)
         .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
         .split(chunks[0]);
 
+    //add the border to the input matrix
+    let padding_input_matrix = Layout::default()
+        .margin(1)
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .split(left_chunk[0]);
+
+    let border_input_matrix = Block::default()
+        .title("Input matrix")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
+
+    f.render_widget(border_input_matrix, left_chunk[0]);
+
     let right_chunk = Layout::default()
         .direction(Direction::Vertical)
-        .margin(1)
         .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
         .split(chunks[1]);
 
@@ -77,23 +87,55 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid, anime: &mut Animatio
         .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
         .split(right_chunk[0]);
 
-    //splitting the rigt-down corner
+    //splitting the rigt chunk
     let state_prints_chunk = Layout::default()
         .direction(Direction::Horizontal)
-        .margin(1)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
         .split(right_chunk[1]);
 
+    //add padding to the prints
+    let print_padding = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(1)
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .split(state_prints_chunk[1]);
+
+    let print_border = Block::default()
+        .title("Machine output")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
+    f.render_widget(print_border, state_prints_chunk[1]);
+
+    //split the state from progress
     let state_progress_chunk = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
         .split(state_prints_chunk[0]);
 
+    //add the border to the state
+    let state_padding = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(1)
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .split(state_progress_chunk[0]);
+
+    let state_border = Block::default()
+        .title("Current state")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
+    f.render_widget(state_border, state_progress_chunk[0]);
+
     //current progress chart
-    let current_progress_block = Block::default()
+    let progress_padding = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(1)
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .split(state_progress_chunk[1]);
+
+    let border_progress = Block::default()
         .title("Current progress")
         .borders(Borders::ALL);
-    f.render_widget(current_progress_block, state_progress_chunk[1]);
+    f.render_widget(border_progress, state_progress_chunk[1]);
     //split the grid
     let vertical_progress_split = Layout::default()
         .direction(Direction::Vertical)
@@ -105,7 +147,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid, anime: &mut Animatio
             ]
             .as_ref(),
         )
-        .split(state_progress_chunk[1]);
+        .split(progress_padding[0]);
     let mut horizontal_progress_split_vec = vec![vec![Rect::default()]; 3];
     let mut progress_blocks = vec![vec![Block::default(); 3]; 3];
     for i in 0..3 {
@@ -158,7 +200,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid, anime: &mut Animatio
             ]
             .as_ref(),
         )
-        .split(left_chunk[0]);
+        .split(padding_input_matrix[0]);
     let mut temp_array = vec![vec![Rect::default()]; 3];
     let mut block_array = vec![vec![Block::default(); 3]; 3];
     for i in 0..3 {
@@ -203,24 +245,35 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid, anime: &mut Animatio
         let text = "You are about to enter unsafe rust!\n Press 'Enter' to proceed.";
         if ingrid.is_started == true {
             //animate the current position of the disk on the belt
+            let padding = Layout::default()
+                .constraints([Constraint::Percentage(100)])
+                .margin(1)
+                .split(left_chunk[1]);
             let animation_chunk = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints(
                     [
                         Constraint::Length(anime.position),
-                        Constraint::Length(2 * left_chunk[1].height),
+                        Constraint::Length(2 * padding[0].height),
                         Constraint::Length(
-                            left_chunk[1].width - 2 * left_chunk[1].height - anime.position,
+                            left_chunk[1].width - 2 * padding[0].height - anime.position,
                         ),
                     ]
                     .as_ref(),
                 )
-                .split(left_chunk[1]);
+                .split(padding[0]);
             let disk = Block::default()
                 .style(Style::default().bg(Color::White))
                 .borders(Borders::NONE);
             f.render_widget(disk, animation_chunk[1]);
-            anime.position += 1;
+            if padding[0].width - (2 * padding[0].height) > anime.position {
+                anime.position += 1;
+            }
+            let animation_border = Block::default()
+                .title("Disk position")
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded);
+            f.render_widget(animation_border, left_chunk[1]);
         } else {
             let jumpscare = Paragraph::new(text)
                 .block(will_start)
