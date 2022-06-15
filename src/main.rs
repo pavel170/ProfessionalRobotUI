@@ -7,11 +7,24 @@ use crossterm::{
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{self, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
+    terminal,
     widgets::{BarChart, Block, Borders, Paragraph},
     Frame, Terminal,
 };
+
+const FRAME_RATE_ANIME: u16 = 1000;
+
+struct Animation {
+    position: u16,
+}
+
+impl Animation {
+    fn new() -> Self {
+        Animation { position: 0 }
+    }
+}
 
 struct InputGrid {
     matrix: [[u8; 3]; 3],
@@ -38,7 +51,7 @@ fn output_array(ingrid: &InputGrid) -> [[u8; 3]; 3] {
     ingrid.matrix
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid) {
+fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid, anime: &mut Animation) {
     //layout
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -84,14 +97,28 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid) {
     //split the grid
     let vertical_progress_split = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Max(1), Constraint::Max(1), Constraint::Max(1)].as_ref())
+        .constraints(
+            [
+                Constraint::Ratio(1, 3),
+                Constraint::Ratio(1, 3),
+                Constraint::Ratio(1, 3),
+            ]
+            .as_ref(),
+        )
         .split(state_progress_chunk[1]);
     let mut horizontal_progress_split_vec = vec![vec![Rect::default()]; 3];
     let mut progress_blocks = vec![vec![Block::default(); 3]; 3];
     for i in 0..3 {
         horizontal_progress_split_vec[i] = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Max(1), Constraint::Max(1), Constraint::Max(1)].as_ref())
+            .constraints(
+                [
+                    Constraint::Ratio(1, 3),
+                    Constraint::Ratio(1, 3),
+                    Constraint::Ratio(1, 3),
+                ]
+                .as_ref(),
+            )
             .split(vertical_progress_split[i]);
     }
     //place the blocks in the grid
@@ -100,6 +127,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid) {
             progress_blocks[i][j] = Block::default().borders(Borders::ALL);
             f.render_widget(
                 progress_blocks[i][j].clone(),
+                //TODO render the colors of the progress
                 horizontal_progress_split_vec[i][j],
             );
         }
@@ -172,14 +200,33 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid) {
             .title_alignment(tui::layout::Alignment::Center)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Red));
-        let mut text = "You are about to enter unsafe rust!\n Press 'Enter' to proceed.";
+        let text = "You are about to enter unsafe rust!\n Press 'Enter' to proceed.";
         if ingrid.is_started == true {
-            text = "You did it. Now the robot is running!";
+            //animate the current position of the disk on the belt
+            let animation_chunk = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(
+                    [
+                        Constraint::Length(anime.position),
+                        Constraint::Length(2 * left_chunk[1].height),
+                        Constraint::Length(
+                            left_chunk[1].width - 2 * left_chunk[1].height - anime.position,
+                        ),
+                    ]
+                    .as_ref(),
+                )
+                .split(left_chunk[1]);
+            let disk = Block::default()
+                .style(Style::default().bg(Color::White))
+                .borders(Borders::NONE);
+            f.render_widget(disk, animation_chunk[1]);
+            anime.position += 1;
+        } else {
+            let jumpscare = Paragraph::new(text)
+                .block(will_start)
+                .alignment(tui::layout::Alignment::Center);
+            f.render_widget(jumpscare, left_chunk[1]);
         }
-        let jumpscare = Paragraph::new(text)
-            .block(will_start)
-            .alignment(tui::layout::Alignment::Center);
-        f.render_widget(jumpscare, left_chunk[1]);
     }
 }
 
@@ -190,9 +237,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let mut ingrid = InputGrid::new();
+    let mut animation = Animation::new();
 
     loop {
-        terminal.draw(|f| ui(f, &mut ingrid))?;
+        terminal.draw(|f| ui(f, &mut ingrid, &mut animation))?;
         if let Event::Key(key) = event::read()? {
             match key.code {
                 KeyCode::Char('q') => break,
