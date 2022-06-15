@@ -8,8 +8,8 @@ use crossterm::{
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
-    widgets::{Block, Borders, Paragraph},
+    style::{Color, Modifier, Style},
+    widgets::{BarChart, Block, Borders, Paragraph},
     Frame, Terminal,
 };
 
@@ -49,25 +49,43 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid) {
     let left_chunk = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
-        .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
+        .constraints([Constraint::Percentage(100), Constraint::Percentage(0)].as_ref())
         .split(chunks[0]);
 
     let right_chunk = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
-        .constraints([Constraint::Percentage(20), Constraint::Percentage(80)].as_ref())
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
         .split(chunks[1]);
 
-    //input grid
+    let bar_center_chunk = Layout::default()
+        .direction(Direction::Horizontal)
+        .margin(1)
+        .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
+        .split(right_chunk[0]);
 
+    //RGB Chart
+    let title_block = Block::default().title("RGB Chart").borders(Borders::ALL);
+    f.render_widget(title_block, right_chunk[0]);
+    let chart = BarChart::default()
+        .bar_width(5)
+        .bar_gap(3)
+        .bar_style(Style::default().fg(Color::Yellow))
+        .label_style(Style::default().fg(Color::White))
+        .data(&[("R", 2), ("G", 4), ("B", 3)])
+        .max(4);
+
+    f.render_widget(chart, bar_center_chunk[1]);
+
+    //input grid
     let input_columns = Layout::default()
         .direction(Direction::Horizontal)
         .margin(1)
         .constraints(
             [
-                Constraint::Percentage(33),
-                Constraint::Percentage(33),
-                Constraint::Percentage(33),
+                Constraint::Ratio(1, 3),
+                Constraint::Ratio(1, 3),
+                Constraint::Ratio(1, 3),
             ]
             .as_ref(),
         )
@@ -80,9 +98,9 @@ fn ui<B: Backend>(f: &mut Frame<B>, ingrid: &mut InputGrid) {
             .margin(1)
             .constraints(
                 [
-                    Constraint::Ratio(1, 3),
-                    Constraint::Ratio(1, 3),
-                    Constraint::Ratio(1, 3),
+                    Constraint::Ratio(2, 6),
+                    Constraint::Ratio(2, 6),
+                    Constraint::Ratio(2, 6),
                 ]
                 .as_ref(),
             )
